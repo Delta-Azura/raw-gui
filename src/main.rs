@@ -1,0 +1,200 @@
+use iced::widget::{button, column, container, row, scrollable, text, Button};
+use iced::{Background, Border, Color, Element, Length, Theme};
+use std::fs;
+use std::process::Command;
+use std::path::Path;
+use std::env;
+
+#[derive(Debug, Clone)]
+pub enum Message {
+    Install,
+    Select(String),
+    Uninstall,
+}
+
+struct App {
+    packages: Vec<String>,
+    selected: Option<String>,
+    pkglistwhole: Vec<String>,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        if !Path::new("/home/alexis/tmp/").exists() {
+            fs::create_dir("/home/alexis/tmp/").unwrap();
+        } else {
+            fs::remove_dir_all("/home/alexis/tmp/").unwrap();
+            fs::create_dir("/home/alexis/tmp/").unwrap();
+        }
+        env::set_current_dir("/var/cache/tmp").unwrap();
+        download();
+        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/base/.REPO").unwrap();
+        let mut pkglistwhole = Vec::new();
+        for i in pkgrepo_one.lines() {
+            if i.starts_with("@") {
+                let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap().to_string();
+                pkglistwhole.push(pkgname.to_string());
+            }
+        }
+        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/cli/.REPO").unwrap();
+        for i in pkgrepo_one.lines() {
+            if i.starts_with("@") {
+                let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
+                pkglistwhole.push(pkgname.to_string());
+            }
+        }
+        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/cli-extra/.REPO").unwrap();
+        for i in pkgrepo_one.lines() {
+            if i.starts_with("@") {
+                let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
+                pkglistwhole.push(pkgname.to_string());
+            }
+        }
+        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/gui/.REPO").unwrap();
+        for i in pkgrepo_one.lines() {
+            if i.starts_with("@") {
+                let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
+                pkglistwhole.push(pkgname.to_string());
+            }
+        }
+        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/gui-extra/.REPO").unwrap();
+        for i in pkgrepo_one.lines() {
+            if i.starts_with("@") {
+                let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
+                pkglistwhole.push(pkgname.to_string());
+            }
+        }
+        Self {
+            packages: fs::read_dir("/var/lib/pkg/DB")
+                .unwrap()
+                .filter_map(|e| Some(e.ok()?.file_name().to_string_lossy().to_string()))
+                .collect(),
+            selected: None,
+            pkglistwhole,
+
+        }
+    }
+}
+
+fn pkg_button(label: &str, active: bool) -> Button<'_, Message> {
+    button(
+        text(label).size(13)
+    )
+    .on_press(Message::Select(label.to_string()))
+    .width(Length::Fill)
+    .style(move |_theme, status| {
+        let bg = if active {
+            Color::from_rgb(0.11, 0.62, 0.46)
+        } else if matches!(status, button::Status::Hovered) {
+            Color::from_rgb(0.15, 0.15, 0.17)
+        } else {
+            Color::from_rgb(0.10, 0.10, 0.12)
+        };
+        button::Style {
+            background: Some(Background::Color(bg)),
+            text_color: if active {
+                Color::WHITE
+            } else {
+                Color::from_rgb(0.75, 0.75, 0.78)
+            },
+            border: Border {
+                radius: 6.0.into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    })
+}
+
+impl App {
+    pub fn view(&self) -> Element<'_, Message> {
+        let list = self.packages.iter().fold(column![].spacing(2), |col, pkg| {
+            let active = self.selected.as_deref() == Some(pkg.as_str());
+            col.push(pkg_button(pkg.as_str(), active))
+        });
+
+        let sidebar = container(
+            column![
+                container(
+                    text("Cards GUI").size(16).color(Color::WHITE)
+                )
+                .padding([14, 16]),
+                container(scrollable(
+                    container(list).padding([4, 8])
+                ))
+                .height(Length::Fill),
+            ]
+        )
+        .width(Length::Fixed(220.0))
+        .height(Length::Fill)
+        .style(|_| container::Style {
+            background: Some(Background::Color(Color::from_rgb(0.08, 0.08, 0.10))),
+            ..Default::default()
+        });
+
+        let detail_content: Element<'_, Message> = match &self.selected {
+            Some(pkg) => column![
+                text(pkg.as_str()).size(22).color(Color::WHITE),
+                text("Installé").size(12).color(Color::from_rgb(0.11, 0.62, 0.46)),
+                container(text("")).height(Length::Fixed(20.0)),
+                button(text("Désinstaller").size(13).color(Color::WHITE))
+                    .on_press(Message::Uninstall)
+                    .style(|_theme, _status| button::Style {
+                        background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                        border: Border { radius: 6.0.into(), ..Default::default() },
+                        text_color: Color::WHITE,
+                        ..Default::default()
+                    }),
+            ]
+            .spacing(8)
+            .into(),
+            None => text("Sélectionne un paquet")
+                .size(14)
+                .color(Color::from_rgb(0.4, 0.4, 0.45))
+                .into(),
+        };
+
+        let detail = container(detail_content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(24)
+            .style(|_| container::Style {
+                background: Some(Background::Color(Color::from_rgb(0.11, 0.11, 0.13))),
+                ..Default::default()
+            });
+
+        row![sidebar, detail]
+            .height(Length::Fill)
+            .into()
+    }
+
+    pub fn update(&mut self, message: Message) {
+        match message {
+            Message::Select(pkg) => self.selected = Some(pkg),
+            Message::Install => {
+                if let Some(pkg) = &self.selected {
+                    Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
+                }
+            }
+            Message::Uninstall => {
+                if let Some(pkg) = &self.selected {
+                    Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
+                }
+            }
+        }
+    }
+}
+
+fn main() -> iced::Result {
+    iced::run(App::update, App::view)
+}
+
+
+
+fn download() {
+    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/base/.REPO").status();
+    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/cli-extra/.REPO").status();
+    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/cli/.REPO").status();
+    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/gui/.REPO").status();
+    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/gui-extra/.REPO").status();
+}
