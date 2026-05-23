@@ -40,15 +40,16 @@ struct App {
 
 impl Default for App {
     fn default() -> Self {
-        if !Path::new("/home/alexis/tmp/").exists() {
-            fs::create_dir("/home/alexis/tmp/").unwrap();
+        let home = std::env::var("HOME").unwrap();
+        if !Path::new(&format!("{}/tmp", home)).exists() {
+            fs::create_dir(&format!("{}/tmp", home)).unwrap();
         } else {
-            fs::remove_dir_all("/home/alexis/tmp/").unwrap();
-            fs::create_dir("/home/alexis/tmp/").unwrap();
+            fs::remove_dir_all(format!("{}/tmp", home)).unwrap();
+            fs::create_dir(format!("{}/tmp", home)).unwrap();
         }
-        env::set_current_dir("/home/alexis/tmp/").unwrap();
+        env::set_current_dir(format!("{}/tmp", home)).unwrap();
         download();
-        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO").unwrap();
+        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO", home)).unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         let mut pkglistwhole = Vec::new();
         for i in pkgrepo_one.lines() {
@@ -61,7 +62,7 @@ impl Default for App {
                 }
             }
         }
-        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.1").unwrap();
+        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO.1", home)).unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
@@ -73,7 +74,7 @@ impl Default for App {
                 }
             }
         }
-        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.2").unwrap();
+        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO.2", home)).unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
@@ -85,7 +86,7 @@ impl Default for App {
                 }
             }
         }
-        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.3").unwrap();
+        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO.3", home)).unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
@@ -97,7 +98,7 @@ impl Default for App {
                 }
             }
         }
-        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.4").unwrap();
+        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO.4", home)).unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
@@ -157,14 +158,15 @@ impl App {
             let active = self.selected.as_deref() == Some(pkg.as_str());
             col.push(pkg_button(pkg.as_str(), active))
         });
-        let pkgrepo = fs::read_dir("/home/alexis/tmp").unwrap().filter_map(|e| e.ok());
+        let home = std::env::var("HOME").unwrap();
+        let pkgrepo = fs::read_dir(format!("{}/tmp", home)).unwrap().filter_map(|e| e.ok());
         let mut desc = String::from("No description");
         let mut ver = String::from("No version");
         let mut pack = String::from("No packager");
         for i in pkgrepo {
             let i = i.file_name().to_str().unwrap().to_string();
             if i.starts_with(".REPO") {
-                let repofile = fs::read(format!("/home/alexis/tmp/{}", i)).unwrap();
+                let repofile = fs::read(format!("{}/tmp/{}", home, i)).unwrap();
                 let repofile = String::from_utf8_lossy(&repofile);
                 let target = format!("@{}", self.selected.as_deref().unwrap_or(""));
                 let mut in_pkg = false;
