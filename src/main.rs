@@ -41,6 +41,7 @@ struct App {
     selected: Option<String>,
     pkglistwhole: Vec<String>,
     search: String,
+    status: String,
 }
 
 impl Default for App {
@@ -124,6 +125,7 @@ impl Default for App {
             selected: None,
             pkglistwhole,
             search: String::new(),
+            status: String::new(),
         }
     }
 }
@@ -236,6 +238,7 @@ impl App {
             background: Some(Background::Color(Color::from_rgb(0.08, 0.08, 0.10))),
             ..Default::default()
         });
+        let status_update = text(&self.status);
         let upgrade_btn: iced::widget::Button<'_, Message> = button(text("Upgrade").size(13).color(Color::WHITE))
             .on_press(Message::Upgrade)
             .style(|_theme: &iced::Theme, _status| button::Style {
@@ -297,7 +300,7 @@ impl App {
                 ..Default::default()
             });
 
-        row![sidebar, detail, upgrade_btn]
+        row![sidebar, detail, upgrade_btn, status_update]
             .height(Length::Fill)
             .into()
     }
@@ -335,7 +338,10 @@ impl App {
                     |_| Message::UpgradeDone,
                 )
             }
-            Message::UpgradeDone => Task::none(),
+            Message::UpgradeDone => {
+                self.status = String::from("Upgrade terminé");
+                Task::none()
+            }
         }
     }
 
