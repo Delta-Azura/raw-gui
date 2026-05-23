@@ -140,7 +140,8 @@ impl App {
         });
         let pkgrepo = fs::read_dir("/home/alexis/tmp").unwrap().filter_map(|e| e.ok());
         let mut desc = String::from("No description");
-
+        let mut ver = String::from("No version");
+        let mut pack = String::from("No packager");
         for i in pkgrepo {
             let i = i.file_name().to_str().unwrap().to_string();
             if i.starts_with(".REPO") {
@@ -161,12 +162,23 @@ impl App {
                         if l.starts_with('@') { break; }
                         if l.starts_with('D') {
                             desc = l.strip_prefix('D').unwrap_or("").to_string();
-                            break;
+                            desc = format!("Description : {}", desc);
                         }
+                        if l.starts_with('V') {
+                            ver = l.strip_prefix('V').unwrap_or("").to_string();
+                            ver = format!("Version : {}", ver);
+                        }
+                        if l.starts_with('P') {
+                            pack = l.strip_prefix('P').unwrap_or("").to_string();
+                            pack = format!("Packager : {}", pack);
+                        }
+
                     }
                 }
             }
         }
+        let packager = text(pack).size(13).color(Color::WHITE);
+        let version = text(ver).size(13).color(Color::WHITE);
         let description = text(desc).size(13).color(Color::WHITE);
         let sidebar = container(
             column![
@@ -201,11 +213,7 @@ impl App {
                 } else {
                     text("Non installé").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
                 };
-                column![
-                    text(pkg.as_str()).size(22).color(Color::WHITE),
-                    status_text,
-                    description,
-                    container(text("")).height(Length::Fixed(20.0)),
+                let button_install_uninstall = if self.packages.contains(pkg) {
                     button(text("Désinstaller").size(13).color(Color::WHITE))
                         .on_press(Message::Uninstall)
                         .style(|_theme, _status| button::Style {
@@ -213,7 +221,8 @@ impl App {
                             border: Border { radius: 6.0.into(), ..Default::default() },
                             text_color: Color::WHITE,
                             ..Default::default()
-                        }),
+                        })
+                } else {
                     button(text("Installer").size(13).color(Color::WHITE))
                         .on_press(Message::Install)
                         .style(|_theme, _status| button::Style {
@@ -221,7 +230,16 @@ impl App {
                             border: Border { radius: 6.0.into(), ..Default::default() },
                             text_color: Color::WHITE, 
                             ..Default::default()
-                        }),
+                        })
+                };
+                column![
+                    text(pkg.as_str()).size(22).color(Color::WHITE),
+                    status_text,
+                    description,
+                    version,
+                    packager,
+                    button_install_uninstall,
+                    container(text("")).height(Length::Fixed(20.0)),
                 ]
                 .spacing(8)
                 .into()
