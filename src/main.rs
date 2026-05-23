@@ -26,9 +26,10 @@ impl Default for App {
             fs::remove_dir_all("/home/alexis/tmp/").unwrap();
             fs::create_dir("/home/alexis/tmp/").unwrap();
         }
-        env::set_current_dir("/var/cache/tmp").unwrap();
+        env::set_current_dir("/home/alexis/tmp/").unwrap();
         download();
-        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/base/.REPO").unwrap();
+        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO").unwrap();
+        let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         let mut pkglistwhole = Vec::new();
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
@@ -36,32 +37,40 @@ impl Default for App {
                 pkglistwhole.push(pkgname.to_string());
             }
         }
-        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/cli/.REPO").unwrap();
+        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.1").unwrap();
+        let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
                 pkglistwhole.push(pkgname.to_string());
             }
         }
-        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/cli-extra/.REPO").unwrap();
+        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.2").unwrap();
+        let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
                 pkglistwhole.push(pkgname.to_string());
             }
         }
-        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/gui/.REPO").unwrap();
+        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.3").unwrap();
+        let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
                 pkglistwhole.push(pkgname.to_string());
             }
         }
-        let pkgrepo_one = fs::read_to_string("/home/alexis/tmp/gui-extra/.REPO").unwrap();
+        let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.4").unwrap();
+        let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
-                pkglistwhole.push(pkgname.to_string());
+                if pkglistwhole.contains(&pkgname.to_string()) {
+                    continue
+                } else {
+                    pkglistwhole.push(pkgname.to_string());
+                }
             }
         }
         Self {
@@ -108,10 +117,11 @@ fn pkg_button(label: &str, active: bool) -> Button<'_, Message> {
 
 impl App {
     pub fn view(&self) -> Element<'_, Message> {
-        let list = self.packages.iter().fold(column![].spacing(2), |col, pkg| {
+        let list = self.pkglistwhole.iter().fold(column![].spacing(2), |col, pkg| {
             let active = self.selected.as_deref() == Some(pkg.as_str());
             col.push(pkg_button(pkg.as_str(), active))
         });
+ 
 
         let sidebar = container(
             column![
@@ -133,21 +143,36 @@ impl App {
         });
 
         let detail_content: Element<'_, Message> = match &self.selected {
-            Some(pkg) => column![
-                text(pkg.as_str()).size(22).color(Color::WHITE),
-                text("Installé").size(12).color(Color::from_rgb(0.11, 0.62, 0.46)),
-                container(text("")).height(Length::Fixed(20.0)),
-                button(text("Désinstaller").size(13).color(Color::WHITE))
-                    .on_press(Message::Uninstall)
-                    .style(|_theme, _status| button::Style {
-                        background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
-                        border: Border { radius: 6.0.into(), ..Default::default() },
-                        text_color: Color::WHITE,
-                        ..Default::default()
-                    }),
-            ]
-            .spacing(8)
-            .into(),
+            Some(pkg) => {
+                let status_text = if self.packages.contains(pkg) {
+                    text("Installé").size(12).color(Color::from_rgb(0.11, 0.62, 0.46))
+                } else {
+                    text("Non installé").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
+                };
+                column![
+                    text(pkg.as_str()).size(22).color(Color::WHITE),
+                    status_text,
+                    container(text("")).height(Length::Fixed(20.0)),
+                    button(text("Désinstaller").size(13).color(Color::WHITE))
+                        .on_press(Message::Uninstall)
+                        .style(|_theme, _status| button::Style {
+                            background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                            border: Border { radius: 6.0.into(), ..Default::default() },
+                            text_color: Color::WHITE,
+                            ..Default::default()
+                        }),
+                    button(text("Installer").size(13).color(Color::WHITE))
+                        .on_press(Message::Install)
+                        .style(|_theme, _status| button::Style {
+                            background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                            border: Border { radius: 6.0.into(), ..Default::default() },
+                            text_color: Color::WHITE, 
+                            ..Default::default()
+                        }),
+                ]
+                .spacing(8)
+                .into()
+            },
             None => text("Sélectionne un paquet")
                 .size(14)
                 .color(Color::from_rgb(0.4, 0.4, 0.45))
