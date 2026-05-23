@@ -28,7 +28,7 @@ impl Default for App {
             fs::create_dir("/home/alexis/tmp/").unwrap();
         }
         env::set_current_dir("/home/alexis/tmp/").unwrap();
-        //download();
+        download();
         let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO").unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         let mut pkglistwhole = Vec::new();
