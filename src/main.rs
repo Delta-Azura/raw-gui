@@ -23,6 +23,8 @@ use std::fs;
 use std::process::Command;
 use std::path::Path;
 use std::env;
+use iced::widget::text_input;
+use iced::Task;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -30,12 +32,15 @@ pub enum Message {
     Select(String),
     Uninstall,
     Upgrade,
+    Search(String),
+    UpgradeDone,
 }
 
 struct App {
     packages: Vec<String>,
     selected: Option<String>,
     pkglistwhole: Vec<String>,
+    search: String,
 }
 
 impl Default for App {
@@ -118,6 +123,7 @@ impl Default for App {
                 .collect(),
             selected: None,
             pkglistwhole,
+            search: String::new(),
         }
     }
 }
@@ -159,6 +165,15 @@ impl App {
             let active = self.selected.as_deref() == Some(pkg.as_str());
             col.push(pkg_button(pkg.as_str(), active))
         });
+        let search_bar = text_input("Rechercher...", &self.search)
+            .on_input(Message::Search);
+
+        let list = self.pkglistwhole.iter()
+            .filter(|pkg| pkg.contains(&self.search))
+            .fold(column![].spacing(2), |col, pkg| {
+                let is_active = self.selected.as_deref() == Some(pkg.as_str());
+                col.push(pkg_button(pkg.as_str(), is_active))
+            });
         let home = std::env::var("HOME").unwrap();
         let pkgrepo = fs::read_dir(format!("{}/tmp", home)).unwrap().filter_map(|e| e.ok());
         let mut desc = String::from("No description");
@@ -205,9 +220,10 @@ impl App {
         let sidebar = container(
             column![
                 container(
-                    text("Cards GUI").size(16).color(Color::WHITE)
+                    text("Cards GUI").size(16).color(Color::WHITE),
                 )
                 .padding([14, 16]),
+                container(search_bar).padding([0, 8]),
                 container(scrollable(
                     container(list).padding([4, 8])
                 ))
@@ -286,24 +302,43 @@ impl App {
             .into()
     }
 
-    pub fn update(&mut self, message: Message) {
+
+
+
+
+    pub fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Select(pkg) => self.selected = Some(pkg),
+            Message::Search(query) => { self.search = query; Task::none() }
+            Message::Select(pkg) => { self.selected = Some(pkg); Task::none() }
             Message::Install => {
                 if let Some(pkg) = &self.selected {
-                    Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
+                    Command::new("pkexec").args(["cards", "install", pkg]).status().ok();
                 }
+                Task::none()
             }
             Message::Uninstall => {
                 if let Some(pkg) = &self.selected {
                     Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
                 }
+                Task::none()
             }
             Message::Upgrade => {
-                Command::new("pkgexec").args(["cards", "upgrade"]).status().ok();
+                Task::perform(
+                    async {
+                        std::thread::spawn(|| {
+                            std::process::Command::new("pkexec")
+                                .args(["cards", "upgrade"])
+                                .status()
+                                .ok();
+                        });
+                    },
+                    |_| Message::UpgradeDone,
+                )
             }
+            Message::UpgradeDone => Task::none(),
         }
     }
+
 }
 
 fn main() -> iced::Result {
