@@ -49,7 +49,7 @@ impl Default for App {
         }
         env::set_current_dir(format!("{}/tmp", home)).unwrap();
         download();
-        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO", home)).unwrap();
+        let pkgrepo_one = fs::read(format!("{}/tmp/.REPO.0", home)).unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         let mut pkglistwhole = Vec::new();
         for i in pkgrepo_one.lines() {
@@ -312,9 +312,8 @@ fn main() -> iced::Result {
 
 
 fn download() {
-    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/base/.REPO").status();
-    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/cli-extra/.REPO").status();
-    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/cli/.REPO").status();
-    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/gui/.REPO").status();
-    Command::new("wget").arg("https://downloads.nutyx.org/x86_64/systemd/gui-extra/.REPO").status();
+    for (i, collection) in ["base", "cli", "cli-extra", "gui", "gui-extra"].iter().enumerate() {
+        let cmd = format!("wget -O .REPO.{} https://downloads.nutyx.org/x86_64/systemd/{}/.REPO", i, collection);
+        Command::new("bash").args(["-c", &cmd]).status();
+    }
 }
