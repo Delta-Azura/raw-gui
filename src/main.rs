@@ -330,7 +330,7 @@ impl App {
                     async {
                         std::thread::spawn(|| {
                             std::process::Command::new("pkexec")
-                                .args(["cards", "upgrade"])
+                                .args(["cards", "upgrade", "--proceed"])
                                 .status()
                                 .ok();
                         });
