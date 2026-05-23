@@ -110,6 +110,7 @@ impl Default for App {
                 }
             }
         }
+        pkglistwhole.sort();
         Self {
             packages: fs::read_dir("/var/lib/pkg/DB")
                 .unwrap()
