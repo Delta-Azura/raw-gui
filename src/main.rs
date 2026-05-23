@@ -139,23 +139,35 @@ impl App {
             col.push(pkg_button(pkg.as_str(), active))
         });
         let pkgrepo = fs::read_dir("/home/alexis/tmp").unwrap().filter_map(|e| e.ok());
-        let description: iced::widget::Button<'_, Message> = button(text("No description").size(13).color(Color::WHITE));
-        let desc = "No description";
+        let mut desc = String::from("No description");
+
         for i in pkgrepo {
             let i = i.file_name().to_str().unwrap().to_string();
-            let desc = if i.starts_with(".REPO") {
-                println!("ddddddddd");
+            if i.starts_with(".REPO") {
                 let repofile = fs::read(format!("/home/alexis/tmp/{}", i)).unwrap();
                 let repofile = String::from_utf8_lossy(&repofile);
-                println!("@{}", self.selected.as_deref().unwrap_or(""));
-                let desc = repofile
-                    .lines()
-                    .skip_while(|l| !l.starts_with(&format!("@{}", active)))
-                    .find(|l| l.strip_prefix("D").is_some()).and_then(|l| l.strip_prefix('D')).unwrap_or("No description");
-            };
+                let target = format!("@{}", self.selected.as_deref().unwrap_or(""));
+                let mut in_pkg = false;
+                println!("target: {:?}", target);
+                for l in repofile.lines().take(10) {
+                    println!("{:?}", l);
+                }
+                for l in repofile.lines() {
+                    if l.starts_with(&target) {
+                        in_pkg = true;
+                        continue;
+                    }
+                    if in_pkg {
+                        if l.starts_with('@') { break; }
+                        if l.starts_with('D') {
+                            desc = l.strip_prefix('D').unwrap_or("").to_string();
+                            break;
+                        }
+                    }
+                }
+            }
         }
-        let description: iced::widget::Button<'_, Message> = button(text(desc).size(13).color(Color::WHITE));
-
+        let description = text(desc).size(13).color(Color::WHITE);
         let sidebar = container(
             column![
                 container(
