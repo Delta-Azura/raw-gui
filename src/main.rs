@@ -328,12 +328,11 @@ impl App {
             Message::Upgrade => {
                 Task::perform(
                     async {
-                        std::thread::spawn(|| {
-                            std::process::Command::new("pkexec")
-                                .args(["cards", "upgrade", "--proceed"])
-                                .status()
-                                .ok();
-                        });
+                        tokio::process::Command::new("pkexec")
+                            .args(["cards", "upgrade", "--proceed"])
+                            .status()
+                            .await
+                            .ok();
                     },
                     |_| Message::UpgradeDone,
                 )

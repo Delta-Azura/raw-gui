@@ -6,4 +6,4 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 iced = { version = "0.14", features = ["advanced"] }
-tokio = "1.52.3"
+tokio = { version = "1.52.3", features = ["process", "rt"] }
