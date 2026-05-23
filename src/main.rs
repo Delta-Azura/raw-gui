@@ -10,6 +10,7 @@ pub enum Message {
     Install,
     Select(String),
     Uninstall,
+    Upgrade,
 }
 
 struct App {
@@ -27,14 +28,18 @@ impl Default for App {
             fs::create_dir("/home/alexis/tmp/").unwrap();
         }
         env::set_current_dir("/home/alexis/tmp/").unwrap();
-        download();
+        //download();
         let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO").unwrap();
         let pkgrepo_one = String::from_utf8_lossy(&pkgrepo_one);
         let mut pkglistwhole = Vec::new();
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap().to_string();
-                pkglistwhole.push(pkgname.to_string());
+                if pkglistwhole.contains(&pkgname.to_string()) {
+                    continue
+                } else {
+                    pkglistwhole.push(pkgname.to_string());
+                }
             }
         }
         let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.1").unwrap();
@@ -42,7 +47,11 @@ impl Default for App {
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
-                pkglistwhole.push(pkgname.to_string());
+                if pkglistwhole.contains(&pkgname.to_string()) {
+                    continue
+                } else {
+                    pkglistwhole.push(pkgname.to_string());
+                }
             }
         }
         let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.2").unwrap();
@@ -50,7 +59,11 @@ impl Default for App {
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
-                pkglistwhole.push(pkgname.to_string());
+                if pkglistwhole.contains(&pkgname.to_string()) {
+                    continue
+                } else {
+                    pkglistwhole.push(pkgname.to_string());
+                }
             }
         }
         let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.3").unwrap();
@@ -58,7 +71,11 @@ impl Default for App {
         for i in pkgrepo_one.lines() {
             if i.starts_with("@") {
                 let pkgname = i.split_once("@").map(|(_, pkg)| pkg).unwrap().split_once(".").map(|(pkg, _)| pkg).unwrap();
-                pkglistwhole.push(pkgname.to_string());
+                if pkglistwhole.contains(&pkgname.to_string()) {
+                    continue
+                } else {
+                    pkglistwhole.push(pkgname.to_string());
+                }
             }
         }
         let pkgrepo_one = fs::read("/home/alexis/tmp/.REPO.4").unwrap();
@@ -80,7 +97,6 @@ impl Default for App {
                 .collect(),
             selected: None,
             pkglistwhole,
-
         }
     }
 }
@@ -117,11 +133,28 @@ fn pkg_button(label: &str, active: bool) -> Button<'_, Message> {
 
 impl App {
     pub fn view(&self) -> Element<'_, Message> {
+        let active = "nothing";
         let list = self.pkglistwhole.iter().fold(column![].spacing(2), |col, pkg| {
             let active = self.selected.as_deref() == Some(pkg.as_str());
             col.push(pkg_button(pkg.as_str(), active))
         });
- 
+        let pkgrepo = fs::read_dir("/home/alexis/tmp").unwrap().filter_map(|e| e.ok());
+        let description: iced::widget::Button<'_, Message> = button(text("No description").size(13).color(Color::WHITE));
+        let desc = "No description";
+        for i in pkgrepo {
+            let i = i.file_name().to_str().unwrap().to_string();
+            let desc = if i.starts_with(".REPO") {
+                println!("ddddddddd");
+                let repofile = fs::read(format!("/home/alexis/tmp/{}", i)).unwrap();
+                let repofile = String::from_utf8_lossy(&repofile);
+                println!("@{}", self.selected.as_deref().unwrap_or(""));
+                let desc = repofile
+                    .lines()
+                    .skip_while(|l| !l.starts_with(&format!("@{}", active)))
+                    .find(|l| l.strip_prefix("D").is_some()).and_then(|l| l.strip_prefix('D')).unwrap_or("No description");
+            };
+        }
+        let description: iced::widget::Button<'_, Message> = button(text(desc).size(13).color(Color::WHITE));
 
         let sidebar = container(
             column![
@@ -141,7 +174,14 @@ impl App {
             background: Some(Background::Color(Color::from_rgb(0.08, 0.08, 0.10))),
             ..Default::default()
         });
-
+        let upgrade_btn: iced::widget::Button<'_, Message> = button(text("Upgrade").size(13).color(Color::WHITE))
+            .on_press(Message::Upgrade)
+            .style(|_theme: &iced::Theme, _status| button::Style {
+                background: Some(Background::Color(Color::from_rgb(0.18, 0.35, 0.64))),
+                border: Border { radius: 6.0.into(), ..Default::default() },
+                text_color: Color::WHITE,
+                ..Default::default()
+            });
         let detail_content: Element<'_, Message> = match &self.selected {
             Some(pkg) => {
                 let status_text = if self.packages.contains(pkg) {
@@ -152,6 +192,7 @@ impl App {
                 column![
                     text(pkg.as_str()).size(22).color(Color::WHITE),
                     status_text,
+                    description,
                     container(text("")).height(Length::Fixed(20.0)),
                     button(text("Désinstaller").size(13).color(Color::WHITE))
                         .on_press(Message::Uninstall)
@@ -188,7 +229,7 @@ impl App {
                 ..Default::default()
             });
 
-        row![sidebar, detail]
+        row![sidebar, detail, upgrade_btn]
             .height(Length::Fill)
             .into()
     }
@@ -205,6 +246,9 @@ impl App {
                 if let Some(pkg) = &self.selected {
                     Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
                 }
+            }
+            Message::Upgrade => {
+                Command::new("pkgexec").args(["cards", "upgrade"]).status().ok();
             }
         }
     }
