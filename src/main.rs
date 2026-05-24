@@ -258,12 +258,12 @@ impl App {
                         text("Installed").size(12).color(Color::from_rgb(0.11, 0.62, 0.46))
                     } else {
                         text("Not installed").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
-                    };
+                    }
                 } else {
                     status_text = text(self.statusapp.clone()).size(12).color(Color::from_rgb(0.11, 0.62, 0.46));
                 }
-
-                let button_install_uninstall = if self.statusapp.starts_with("Installed") {
+                let button_install_uninstall = if self.statusapp.is_empty() {
+                    if self.packages.contains(pkg) {
                     button(text("Désinstaller").size(13).color(Color::WHITE))
                         .on_press(Message::Uninstall)
                         .style(|_theme, _status| button::Style {
@@ -272,15 +272,36 @@ impl App {
                             text_color: Color::WHITE,
                             ..Default::default()
                         })
+                    } else {
+                        button(text("Installer").size(13).color(Color::WHITE))
+                            .on_press(Message::Install)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE, 
+                                ..Default::default()
+                            })
+                    }
                 } else {
-                    button(text("Installer").size(13).color(Color::WHITE))
-                        .on_press(Message::Install)
-                        .style(|_theme, _status| button::Style {
-                            background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
-                            border: Border { radius: 6.0.into(), ..Default::default() },
-                            text_color: Color::WHITE, 
-                            ..Default::default()
-                        })
+                    if self.statusapp.starts_with("Installed") {
+                        button(text("Désinstaller").size(13).color(Color::WHITE))
+                            .on_press(Message::Uninstall)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE,
+                                ..Default::default()
+                            })
+                    } else {
+                        button(text("Installer").size(13).color(Color::WHITE))
+                            .on_press(Message::Install)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE, 
+                                ..Default::default()
+                            })
+                    }
                 };
                 column![
                     text(pkg.as_str()).size(22).color(Color::WHITE),
