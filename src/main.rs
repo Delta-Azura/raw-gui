@@ -255,14 +255,15 @@ impl App {
                 //let status_text: iced::Element<'_, Message>;
                 if self.statusapp.is_empty() {
                     status_text = if self.packages.contains(pkg) {
-                        text("Installé").size(12).color(Color::from_rgb(0.11, 0.62, 0.46))
+                        text("Installed").size(12).color(Color::from_rgb(0.11, 0.62, 0.46))
                     } else {
-                        text("Non installé").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
+                        text("Not installed").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
                     };
                 } else {
                     status_text = text(self.statusapp.clone()).size(12).color(Color::from_rgb(0.11, 0.62, 0.46));
                 }
-                let button_install_uninstall = if self.packages.contains(pkg) {
+
+                let button_install_uninstall = if self.statusapp.starts_with("Installed") {
                     button(text("Désinstaller").size(13).color(Color::WHITE))
                         .on_press(Message::Uninstall)
                         .style(|_theme, _status| button::Style {
@@ -325,14 +326,14 @@ impl App {
                 if let Some(pkg) = &self.selected {
                     Command::new("pkexec").args(["cards", "install", pkg]).status().ok();
                 }
-                self.statusapp = String::from("Installé");
+                self.statusapp = String::from("Installed");
                 Task::none()
             }
             Message::Uninstall => {
                 if let Some(pkg) = &self.selected {
                     Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
                 }
-                self.statusapp = String::from("Installé");
+                self.statusapp = String::from("Not installed");
                 Task::none()
             }
             Message::Upgrade => {
