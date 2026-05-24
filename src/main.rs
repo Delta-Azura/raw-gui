@@ -42,6 +42,7 @@ struct App {
     pkglistwhole: Vec<String>,
     search: String,
     status: String,
+    statusapp: String,
 }
 
 impl Default for App {
@@ -126,6 +127,7 @@ impl Default for App {
             pkglistwhole,
             search: String::new(),
             status: String::new(),
+            statusapp: String::new(),
         }
     }
 }
@@ -249,11 +251,17 @@ impl App {
             });
         let detail_content: Element<'_, Message> = match &self.selected {
             Some(pkg) => {
-                let status_text = if self.packages.contains(pkg) {
-                    text("Installé").size(12).color(Color::from_rgb(0.11, 0.62, 0.46))
+                let status_text: iced::widget::Text<'_, iced::Theme>;
+                //let status_text: iced::Element<'_, Message>;
+                if self.statusapp.is_empty() {
+                    status_text = if self.packages.contains(pkg) {
+                        text("Installé").size(12).color(Color::from_rgb(0.11, 0.62, 0.46))
+                    } else {
+                        text("Non installé").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
+                    };
                 } else {
-                    text("Non installé").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
-                };
+                    status_text = text(self.statusapp.clone()).size(12).color(Color::from_rgb(0.11, 0.62, 0.46));
+                }
                 let button_install_uninstall = if self.packages.contains(pkg) {
                     button(text("Désinstaller").size(13).color(Color::WHITE))
                         .on_press(Message::Uninstall)
@@ -317,12 +325,14 @@ impl App {
                 if let Some(pkg) = &self.selected {
                     Command::new("pkexec").args(["cards", "install", pkg]).status().ok();
                 }
+                self.statusapp = String::from("Installé");
                 Task::none()
             }
             Message::Uninstall => {
                 if let Some(pkg) = &self.selected {
                     Command::new("pkexec").args(["cards", "remove", pkg]).status().ok();
                 }
+                self.statusapp = String::from("Installé");
                 Task::none()
             }
             Message::Upgrade => {
