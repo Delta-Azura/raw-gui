@@ -25,7 +25,9 @@ use iced::widget::text_input;
 use iced::Task;
 use raw::changelog;
 mod parsepkgname;
+mod pkgbutton;
 use parsepkgname::parsepkgname;
+use pkgbutton::pkgbutton;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -78,6 +80,18 @@ impl Default for App {
         }
     }
     
+}
+
+impl App {
+    pub fn view(&self) -> Element<'_, Message> {
+        let active = "nothing";
+        let list = self.pkglistwhole.iter().fold(column![].spacing(2), | col, pkg| {
+            let active = self.selected.as_deref() == Some(pkg.as_str());
+        });
+        let search_bar = text_input("Search..." &self.search)
+            .on_input(Message::Search);
+            
+    }
 }
 
 fn main() -> iced::Result {
