@@ -85,12 +85,49 @@ impl Default for App {
 impl App {
     pub fn view(&self) -> Element<'_, Message> {
         let active = "nothing";
-        let list = self.pkglistwhole.iter().fold(column![].spacing(2), | col, pkg| {
-            let active = self.selected.as_deref() == Some(pkg.as_str());
-        });
         let search_bar = text_input("Search..." &self.search)
             .on_input(Message::Search);
-            
+        let list = self.pkglistwhole.iter()
+            .filter(|pkg| pkg.contains(&self.search))
+            .fold(column!([].spacing(2), |col, pkg| {
+                let is_active = self.selected.as_deref() == Some(pkg.as_str());
+                col.push(pkg_button(pkg.as_str(), is_active))
+            }));
+        let index = fs::read_to_string("/var/cache/index.raw").unwrap()
+        let mut desc = String::from("No description");
+        let mut ver = String::from("No version");
+        let mut release = String::from("No release");
+        for i in index.lines() {
+            let informations = i.split("|").collect();
+            ver = i.
+            get(1).unwrap_or_else("Failed to get version");
+            release = i.get(2).unwrap_or_else("No release");
+            desc = i.get(3).unwrap_or_else("No description");
+        }
+        let description = text(desc).size(13).color(Color::WHITE),
+        let version = text(ver).size(13).color(Color::WHITE),
+        let rel = text(release).size(13).color(Color::WHITE),
+        let sidebar = container(
+            column![
+                container(
+                    text("Raw GUI").size(16).color(Color::WHITE),
+                )
+                .padding([14, 16]), 
+                container(search_bar).padding([0, 8]),
+                container(scrollable(
+                    container(list).padding([4, 8])
+                ))
+                .height(Length::Fill),
+            ]
+        )
+        .width(Lenght::Fixed(220, 0))
+        .height(Length::Fill)
+        .style(|_| container::Style {
+            background Some(Background::Color(Color::from_rgb(0.08, 0.08, 0.10))),
+            ..Default::default()
+        });
+        let status_update = text(&self.status);
+        
     }
 }
 
