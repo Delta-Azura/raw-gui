@@ -21,6 +21,9 @@ use std::fs;
 use iced::widget::text_input;
 use iced::Task;
 use raw::changelog;
+use raw::install;
+use raw::upgrade;
+use raw::remove;
 mod parsepkgname;
 mod pkgbutton;
 use parsepkgname::parsepkgname;
@@ -53,22 +56,21 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         let toupgrade = changelog().unwrap();
-        let index = fs::read_to_string("/var/cache/index.raw");
-        let pkglist: Vec<_> = index.unwrap().lines().collect();
-        let pkglistwhole = Vec::new();
+        let index = fs::read_to_string("/var/cache/index.raw").unwrap();
+        let pkglist: Vec<_> = index.lines().collect();
+        let mut pkglistwhole = Vec::new();
         for i in pkglist.iter() {
-            let name = parsepkgname(i.to_string()).unwrap_or_else("Failed to get package name")?;
+            let name = parsepkgname(i.to_string());
             pkglistwhole.push(name);
         }
-        let packages = fs::read_dir("/var/lib/pkg/DB/")
-            .unwrap()
-            .filter_map(|e| Some(e.ok()?.file_name().read_to_string_lossy().to_string())).collect();
+        let packages: Vec<String> = fs::read_dir("/var/lib/pkg/DB/").unwrap().filter_map(|e| Some(e.ok()?.file_name().to_string_lossy().to_string())).collect();
         let pkgnum = packages.len();
+        let pkgnum = pkgnum.to_string();
         Self {
             pkgnum,
             packages,
             pkglistwhole,
-            search: Vec::new(),
+            search: String::new(),
             selected: None, 
             status: String::new(),
             statusapp: String::new(),
@@ -225,41 +227,45 @@ impl App {
             .height(Length::Fill)
             .into()
     }
-}
 
 
-pub fn update(&mut self, message: Message) -> Task<Message> {
-    Message::Search(query) => { self.search = query; Task::none() }
-    Message::Select(pkg) => { self.selected = Some(pkg); Task::none() }
-    Message::Install => {
-        if let Some(pkg) = &self.selected {
-            install(pkg).ok();
-            self.statusapp = String::from("Installed");
-            Task::none()
+
+    pub fn update(&mut self, message: Message) -> Task<Message> {
+        match message {
+            Message::Search(query) => { self.search = query; Task::none() }
+            Message::Select(pkg) => { self.selected = Some(pkg); Task::none() }
+            Message::Install => {
+                if let Some(pkg) = &self.selected {
+                    install(pkg, false).ok();
+                    self.statusapp = String::from("Installed");
+                    Task::none()
+                } else {
+                    Task::none()
+                }
+            }
+            Message::Uninstall => {
+                if let Some(pkg) = &self.selected {
+                    remove(pkg, false).ok();
+                    self.statusapp = String::from("Not installed");
+                    Task::none()
+                } else {
+                    Task::none()
+                }
+            }
+            Message::Upgrade => {
+                raw::upgrade();
+                Task::none()
+            }
+            Message::UpgradeDone => {
+                self.status = String::from("Upgrade terminé");
+                Task::none()
+            }
         }
+        
     }
-    Message::Uninstall => {
-        if let Some(pkg) = &self.selected {
-            remove(pkg).ok();
-            self.statusapp = String::from("Not installed");
-            Task::none()
-        }
-    }
-    Message::Upgrade => {
-        Task::perform(
-            async {
-                raw::upgrade().await
-            }, 
-            |_| Message::UpgradeDone,
-        )
-    }
-    Message::UpgradeDone => {
-        self.status = String::from("Upgrade terminé");
-        Task::none()
-    }
+
 }
 
 fn main() -> iced::Result {
-    iced::run(App::update, App::view);
-    println!("Hello, world!");
+    iced::run(App::update, App::view)
 }
