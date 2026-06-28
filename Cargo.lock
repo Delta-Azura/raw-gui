@@ -3028,7 +3028,7 @@ checksum = "973443cf09a9c8656b574a866ab68dfa19f0867d0340648c7d2f6a71b8a8ea68"
 [[package]]
 name = "raw"
 version = "0.1.0"
-source = "git+https://github.com/Delta-Azura/raw#612cda5fd1df3d50fa6b0fbe00a60e83c3a02b8b"
+source = "git+https://github.com/Delta-Azura/raw#47fafa2ea5a23d14083acf9e84a0c59df37fb31d"
 dependencies = [
  "anyhow",
  "compress-tools",

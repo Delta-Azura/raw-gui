@@ -15,10 +15,9 @@
 //    with this program; if not, write to the Free Software Foundation, Inc.,
 //    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-use iced::widget::{button, column, container, row, scrollable, text, Button};
-use iced::{Background, Border, Color, Element, Length, Theme};
+use iced::widget::{button, column, container, row, scrollable, text};
+use iced::{Background, Border, Color, Element, Length};
 use std::fs;
-use std::env;
 use iced::widget::text_input;
 use iced::Task;
 use raw::changelog;
@@ -26,8 +25,6 @@ mod parsepkgname;
 mod pkgbutton;
 use parsepkgname::parsepkgname;
 use crate::pkgbutton::pkg_button;
-use iced::widget::{button, text, Button};
-use anyhow::Context;
 
 #[derive(Debug, Clone)]
 pub enum Message {
@@ -37,7 +34,6 @@ pub enum Message {
     Upgrade,
     Search(String),
     UpgradeDone,
-    Loaded(Result<Data, String>),
 }
 
 
@@ -58,13 +54,13 @@ impl Default for App {
     fn default() -> Self {
         let toupgrade = changelog().unwrap();
         let index = fs::read_to_string("/var/cache/index.raw");
-        let pkglist = index.unwrap().lines().collect();
+        let pkglist: Vec<_> = index.unwrap().lines().collect();
         let pkglistwhole = Vec::new();
         for i in pkglist.iter() {
-            let name = parsepkgname(i).unwrap_or_else("Failed to get package name")?;
+            let name = parsepkgname(i.to_string()).unwrap_or_else("Failed to get package name")?;
             pkglistwhole.push(name);
         }
-        let packages: fs::read_dir("/var/lib/pkg/DB/")
+        let packages = fs::read_dir("/var/lib/pkg/DB/")
             .unwrap()
             .filter_map(|e| Some(e.ok()?.file_name().read_to_string_lossy().to_string())).collect();
         let pkgnum = packages.len();

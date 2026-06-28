@@ -17,7 +17,7 @@
 
 use anyhow::Context;
 
-pub fn parsepkgname(index: String) -> Result<String> {
-    let name = index.split_once("/Pkgfile").map(|(name, _)| name).context("Failed to use index line")?.rsplit_once("/").map(|(_, name)| name).context("Failed to get package name")?;
-    return Ok(name.to_string());
+pub fn parsepkgname(index: String) -> String {
+    let name = index.split_once("/Pkgfile").map(|(name, _)| name).unwrap_or("Failed to use index line").rsplit_once("/").map(|(_, name)| name).unwrap_or("Failed to get package name");
+    return name.to_string();
 }
