@@ -84,35 +84,38 @@ impl Default for App {
 
 impl App {
     pub fn view(&self) -> Element<'_, Message> {
-        let active = "nothing";
-        let search_bar = text_input("Search..." &self.search)
+        let search_bar = text_input("Search...", &self.search)
             .on_input(Message::Search);
+
         let list = self.pkglistwhole.iter()
             .filter(|pkg| pkg.contains(&self.search))
-            .fold(column!([].spacing(2), |col, pkg| {
+            .fold(column![].spacing(2), |col, pkg| {
                 let is_active = self.selected.as_deref() == Some(pkg.as_str());
                 col.push(pkg_button(pkg.as_str(), is_active))
-            }));
-        let index = fs::read_to_string("/var/cache/index.raw").unwrap()
+            });
+
+        let index = fs::read_to_string("/var/cache/index.raw").unwrap();
         let mut desc = String::from("No description");
         let mut ver = String::from("No version");
         let mut release = String::from("No release");
-        for i in index.lines() {
-            let informations = i.split("|").collect();
-            ver = i.
-            get(1).unwrap_or_else("Failed to get version");
-            release = i.get(2).unwrap_or_else("No release");
-            desc = i.get(3).unwrap_or_else("No description");
+
+        for line in index.lines() {
+            let parts: Vec<&str> = line.split('|').collect();
+            ver = parts.get(1).unwrap_or(&"No version").to_string();
+            release = parts.get(2).unwrap_or(&"No release").to_string();
+            desc = parts.get(3).unwrap_or(&"No description").to_string();
         }
-        let description = text(desc).size(13).color(Color::WHITE),
-        let version = text(ver).size(13).color(Color::WHITE),
-        let rel = text(release).size(13).color(Color::WHITE),
+
+        let description = text(desc).size(13).color(Color::WHITE);
+        let version = text(ver).size(13).color(Color::WHITE);
+        let rel = text(release).size(13).color(Color::WHITE);
+
         let sidebar = container(
             column![
                 container(
                     text("Raw GUI").size(16).color(Color::WHITE),
                 )
-                .padding([14, 16]), 
+                .padding([14, 16]),
                 container(search_bar).padding([0, 8]),
                 container(scrollable(
                     container(list).padding([4, 8])
@@ -120,14 +123,143 @@ impl App {
                 .height(Length::Fill),
             ]
         )
-        .width(Lenght::Fixed(220, 0))
+        .width(Length::Fixed(220.0))
         .height(Length::Fill)
         .style(|_| container::Style {
-            background Some(Background::Color(Color::from_rgb(0.08, 0.08, 0.10))),
+            background: Some(Background::Color(Color::from_rgb(0.08, 0.08, 0.10))),
             ..Default::default()
         });
+
         let status_update = text(&self.status);
-        
+
+        let upgrade_btn: iced::widget::Button<'_, Message> = button(
+            text("Upgrade").size(13).color(Color::WHITE)
+        )
+        .on_press(Message::Upgrade)
+        .style(|_theme: &iced::Theme, _status| button::Style {
+            background: Some(Background::Color(Color::from_rgb(0.18, 0.35, 0.64))),
+            border: Border { radius: 6.0.into(), ..Default::default() },
+            text_color: Color::WHITE,
+            ..Default::default()
+        });
+
+        let detail_content: Element<'_, Message> = match &self.selected {
+            Some(pkg) => {
+                let status_text: iced::widget::Text<'_, iced::Theme>;
+                if self.statusapp.is_empty() {
+                    status_text = if self.packages.contains(pkg) {
+                        text("Installed").size(13).color(Color::from_rgb(0.11, 0.62, 0.46))
+                    } else {
+                        text("Not installed").size(12).color(Color::from_rgb(0.5, 0.5, 0.5))
+                    };
+                } else {
+                    status_text = text(self.statusapp.clone()).size(12).color(Color::from_rgb(0.11, 0.62, 0.46));
+                }
+
+                let button_install_uninstall = if self.statusapp.is_empty() {
+                    if self.packages.contains(pkg) {
+                        button(text("Désinstaller").size(13).color(Color::WHITE))
+                            .on_press(Message::Uninstall)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE,
+                                ..Default::default()
+                            })
+                    } else {
+                        button(text("Installer").size(13).color(Color::WHITE))
+                            .on_press(Message::Install)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE,
+                                ..Default::default()
+                            })
+                    }
+                } else {
+                    if self.statusapp.starts_with("Installed") {
+                        button(text("Désinstaller").size(13).color(Color::WHITE))
+                            .on_press(Message::Uninstall)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE,
+                                ..Default::default()
+                            })
+                    } else {
+                        button(text("Installer").size(13).color(Color::WHITE))
+                            .on_press(Message::Install)
+                            .style(|_theme, _status| button::Style {
+                                background: Some(Background::Color(Color::from_rgb(0.64, 0.18, 0.18))),
+                                border: Border { radius: 6.0.into(), ..Default::default() },
+                                text_color: Color::WHITE,
+                                ..Default::default()
+                            })
+                    }
+                };
+
+                column![
+                    text(pkg.as_str()).size(22).color(Color::WHITE),
+                    status_text,
+                    description,
+                    version,
+                    rel,
+                    button_install_uninstall,
+                    container(text("")).height(Length::Fixed(20.0)),
+                ]
+                .spacing(8)
+                .into()
+            },
+            None => text("Sélectionne un paquet")
+                .size(14)
+                .color(Color::from_rgb(0.4, 0.4, 0.45))
+                .into(),
+        };
+
+        let detail = container(detail_content)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .padding(24)
+            .style(|_| container::Style {
+                background: Some(Background::Color(Color::from_rgb(0.11, 0.11, 0.13))),
+                ..Default::default()
+            });
+
+        row![sidebar, detail, upgrade_btn, status_update]
+            .height(Length::Fill)
+            .into()
+    }
+}
+
+
+pub fn update(&mut self, message: Message) -> Task<Message> {
+    Message::Search(query) => { self.search = query; Task::none() }
+    Message::Select(pkg) => { self.selected = Some(pkg); Task::none() }
+    Message::Install => {
+        if let Some(pkg) = &self.selected {
+            install(pkg).ok();
+            self.statusapp = String::from("Installed");
+            Task::none()
+        }
+    }
+    Message::Uninstall => {
+        if let Some(pkg) = &self.selected {
+            remove(pkg).ok();
+            self.statusapp = String::from("Not installed");
+            Task::none()
+        }
+    }
+    Message::Upgrade => {
+        Task::perform(
+            async {
+                raw::upgrade().await
+            }, 
+            |_| Message::UpgradeDone,
+        )
+    }
+    Message::UpgradeDone => {
+        self.status = String::from("Upgrade terminé");
+        Task::none()
     }
 }
 
