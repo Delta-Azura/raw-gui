@@ -15,7 +15,9 @@
 //    with this program; if not, write to the Free Software Foundation, Inc.,
 //    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+use anyhow::Context;
+
 pub fn parsepkgname(index: String) -> Result<String> {
     let name = index.split_once("/Pkgfile").map(|(name, _)| name).context("Failed to use index line")?.rsplit_once("/").map(|(_, name)| name).context("Failed to get package name")?;
-    return Ok(name);
+    return Ok(name.to_string());
 }
